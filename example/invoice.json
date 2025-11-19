@@ -1,0 +1,53 @@
+{
+  "Number": "RE-2025-001",
+  "IssueDate": "2025-01-15T00:00:00Z",
+  "DueDate": "2025-01-30T00:00:00Z",
+  "Currency": "EUR",
+  "Note": "Rechnung gemäß Dienstleistung.",
+  "BuyerReference": "PO-2025-001",
+  "Seller": {
+    "Name": "Musterfirma IT GmbH",
+    "Street": "Musterstraße 2",
+    "City": "Berlin",
+    "PostalCode": "10117",
+    "CountryCode": "DE",
+    "VATID": "DE123456789",
+    "Contact": {
+      "Name": "Max Mustermann",
+      "Phone": "+4930123456",
+      "Email": "invoice@muster.de"
+    }
+  },
+  "Buyer": {
+    "Name": "Beispiel Kunde GmbH",
+    "Street": "Marktplatz 5",
+    "City": "Hamburg",
+    "PostalCode": "20095",
+    "CountryCode": "DE",
+    "VATID": "DE987654321"
+  },
+  "Payment": {
+    "IBAN": "DE99500500501234567890",
+    "BIC": "NODEDEXX",
+    "AccountHolder": "Musterfirma IT GmbH",
+    "PaymentMeansCode": "30"
+  },
+  "LineItems": [
+    {
+      "Description": "Consulting",
+      "Quantity": "10.0",
+      "UnitCode": "HUR",
+      "UnitPrice": "100.00",
+      "TaxRate": "19.0"
+    },
+    {
+      "Description": "Office",
+      "Quantity": "1.0",
+      "UnitCode": "C62",
+      "UnitPrice": "50.00",
+      "TaxRate": "19.0"
+    }
+  ],
+  "TaxTotal": "199.50",
+  "GrandTotal": "1249.50"
+}
