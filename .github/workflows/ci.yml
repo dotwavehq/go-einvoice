@@ -18,3 +18,17 @@ jobs:
       - uses: golangci/golangci-lint-action@v7
         with:
           version: latest
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install saxonche
+      - name: Validate example invoice against EN 16931 / XRechnung schematron
+        run: bash scripts/validate.sh

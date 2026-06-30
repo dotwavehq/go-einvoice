@@ -46,17 +46,19 @@ func main() {
         Number:         "RE-2025-1001",
         IssueDate:      time.Now(),
         DueDate:        time.Now().AddDate(0, 0, 14),
+        DeliveryDate:   time.Now(), // BT-72, required under German VAT law
         BuyerReference: "ORDER-12345",
         Currency:       "EUR",
         Note:           "Thank you for your business.",
 
         Seller: einvoice.Party{
-            Name:        "My Software Company GmbH",
-            Street:      "Tech Lane 1",
-            City:        "Berlin",
-            PostalCode:  "10115",
-            CountryCode: "DE", 
-            VATID:       "DE123456789",
+            Name:             "My Software Company GmbH",
+            Street:           "Tech Lane 1",
+            City:             "Berlin",
+            PostalCode:       "10115",
+            CountryCode:      "DE",
+            VATID:            "DE123456789",
+            ElectronicAddress: "billing@mycompany.com", // BT-34, mandatory in XRechnung
             Contact: &einvoice.Contact{
                 Name:  "Jane Doe",
                 Phone: "+49 30 123456",
@@ -65,12 +67,13 @@ func main() {
         },
 
         Buyer: einvoice.Party{
-            Name:        "Client Corp AG",
-            Street:      "Business Rd 5",
-            City:        "Munich",
-            PostalCode:  "80331",
-            CountryCode: "DE",
-            VATID:       "DE987654321",
+            Name:             "Client Corp AG",
+            Street:           "Business Rd 5",
+            City:             "Munich",
+            PostalCode:       "80331",
+            CountryCode:      "DE",
+            VATID:            "DE987654321",
+            ElectronicAddress: "ap@clientcorp.de", // BT-49, mandatory in XRechnung
         },
 
         Payment: einvoice.Payment{
@@ -154,6 +157,20 @@ supported — each (category, rate) combination becomes its own VAT breakdown gr
 ./einvoice -in invoice.json -pdf invoice.pdf -out invoice
 # Creates invoice.pdf
 ```
+
+## Validation
+
+Generated invoices are validated in CI against the official **EN 16931** and
+**XRechnung (KoSIT)** schematron rules. To run it locally you need `python3`
+with [`saxonche`](https://pypi.org/project/saxonche/) (an XSLT 2.0 engine):
+
+```bash
+pip install saxonche
+bash scripts/validate.sh   # builds example/invoice.json → CII XML → validates
+```
+
+The script downloads and caches the official schematron and fails on any
+blocking (`fatal`/`error`) rule violation.
 
 ## License
 

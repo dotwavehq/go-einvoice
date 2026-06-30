@@ -1,21 +1,23 @@
 {
-  "Number": "RE-2025-001",
-  "IssueDate": "2025-01-15T00:00:00Z",
-  "DueDate": "2025-01-30T00:00:00Z",
+  "Number": "RE-2026-001",
+  "IssueDate": "2026-01-15T00:00:00Z",
+  "DueDate": "2026-01-29T00:00:00Z",
+  "DeliveryDate": "2026-01-15T00:00:00Z",
   "Currency": "EUR",
-  "Note": "Rechnung gemäß Dienstleistung.",
-  "BuyerReference": "PO-2025-001",
+  "Note": "Vielen Dank für Ihren Einkauf.",
+  "BuyerReference": "PO-2026-001",
   "Seller": {
-    "Name": "Musterfirma IT GmbH",
-    "Street": "Musterstraße 2",
-    "City": "Berlin",
-    "PostalCode": "10117",
+    "Name": "Autohaus Muster GmbH",
+    "Street": "Ringstraße 1",
+    "City": "Köln",
+    "PostalCode": "50667",
     "CountryCode": "DE",
     "VATID": "DE123456789",
+    "ElectronicAddress": "rechnung@autohaus-muster.de",
     "Contact": {
       "Name": "Max Mustermann",
-      "Phone": "+4930123456",
-      "Email": "invoice@muster.de"
+      "Phone": "+4922112345",
+      "Email": "rechnung@autohaus-muster.de"
     }
   },
   "Buyer": {
@@ -24,30 +26,32 @@
     "City": "Hamburg",
     "PostalCode": "20095",
     "CountryCode": "DE",
-    "VATID": "DE987654321"
+    "VATID": "DE987654321",
+    "ElectronicAddress": "einkauf@beispiel-kunde.de"
   },
   "Payment": {
     "IBAN": "DE99500500501234567890",
     "BIC": "NODEDEXX",
-    "AccountHolder": "Musterfirma IT GmbH",
+    "AccountHolder": "Autohaus Muster GmbH",
     "PaymentMeansCode": "30"
   },
   "LineItems": [
     {
-      "Description": "Consulting",
-      "Quantity": "10.0",
-      "UnitCode": "HUR",
-      "UnitPrice": "100.00",
-      "TaxRate": "19.0"
-    },
-    {
-      "Description": "Office",
+      "Description": "Gebrauchtwagen VW Golf VII",
       "Quantity": "1.0",
       "UnitCode": "C62",
-      "UnitPrice": "50.00",
+      "UnitPrice": "10000.00",
+      "TaxCategory": "E",
+      "TaxRate": "0",
+      "ExemptionCode": "VATEX-EU-F"
+    },
+    {
+      "Description": "Überführung",
+      "Quantity": "1.0",
+      "UnitCode": "C62",
+      "UnitPrice": "100.00",
+      "TaxCategory": "S",
       "TaxRate": "19.0"
     }
-  ],
-  "TaxTotal": "199.50",
-  "GrandTotal": "1249.50"
+  ]
 }
