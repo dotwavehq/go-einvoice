@@ -1,0 +1,18 @@
+# Binaries
+/einvoice
+/cmd/einvoice/einvoice
+*.exe
+
+# Generated invoice output
+*_out.xml
+*_out.pdf
+
+# Test & coverage
+*.test
+*.out
+coverage.*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
