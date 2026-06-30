@@ -1,4 +1,4 @@
-package model
+package einvoice
 
 // InvoiceSerializer defines the contract for converting the domain model into a spec format.
 type InvoiceSerializer interface {

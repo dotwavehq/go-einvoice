@@ -18,11 +18,18 @@ go get github.com/dotwavehq/go-einvoice
 
 ## Library Usage
 
-To use `go-einvoice` in your backend service, you interact primarily with the model package. The library takes care of the complex XML namespaces and business rules.
+To use `go-einvoice` in your backend service, you build an `einvoice.Invoice` and hand it to a serializer. The library takes care of the complex XML namespaces and business rules.
 
 Create an Invoice
 
 ```go
+import (
+    einvoice "github.com/dotwavehq/go-einvoice"
+    "github.com/dotwavehq/go-einvoice/cii"
+    "github.com/dotwavehq/go-einvoice/zugferd"
+    "github.com/shopspring/decimal"
+)
+
 func main() {
     // Helper to create decimals from string to avoid float precision errors
     toDec := func(s string) decimal.Decimal {
@@ -30,7 +37,7 @@ func main() {
         return d
     }
 
-    invoice := model.Invoice{
+    invoice := einvoice.Invoice{
         Number:         "RE-2025-1001",
         IssueDate:      time.Now(),
         DueDate:        time.Now().AddDate(0, 0, 14),
@@ -38,21 +45,21 @@ func main() {
         Currency:       "EUR",
         Note:           "Thank you for your business.",
 
-        Seller: model.Party{
+        Seller: einvoice.Party{
             Name:        "My Software Company GmbH",
             Street:      "Tech Lane 1",
             City:        "Berlin",
             PostalCode:  "10115",
             CountryCode: "DE", 
             VATID:       "DE123456789",
-            Contact: &model.Contact{
+            Contact: &einvoice.Contact{
                 Name:  "Jane Doe",
                 Phone: "+49 30 123456",
                 Email: "billing@mycompany.com",
             },
         },
 
-        Buyer: model.Party{
+        Buyer: einvoice.Party{
             Name:        "Client Corp AG",
             Street:      "Business Rd 5",
             City:        "Munich",
@@ -61,12 +68,12 @@ func main() {
             VATID:       "DE987654321",
         },
 
-        Payment: model.Payment{
+        Payment: einvoice.Payment{
             IBAN:             "DE99123456789012345678",
             PaymentMeansCode: "30",
         },
 
-        LineItems: []model.LineItem{
+        LineItems: []einvoice.LineItem{
             {
                 Description: "Consulting Services",
                 Quantity:    toDec("10.0"),
@@ -112,13 +119,13 @@ func main() {
 ### Generate XML
 
 ```go
-./go-einvoice -in invoice.json -out invoice
+./einvoice -in invoice.json -out invoice
 # Creates invoice.xml
 ```
 ### Generate ZUGFeRD PDF
 
 ```go
-./go-einvoice -in invoice.json -pdf invoice.pdf -out invoice
+./einvoice -in invoice.json -pdf invoice.pdf -out invoice
 # Creates invoice.pdf
 ```
 

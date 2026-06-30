@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"strconv"
 
-	"github.com/dotwavehq/go-einvoice/pkg/model"
+	einvoice "github.com/dotwavehq/go-einvoice"
 )
 
 type CIISerializer struct{}
@@ -13,7 +13,7 @@ func NewSerializer() *CIISerializer {
 	return &CIISerializer{}
 }
 
-func (s *CIISerializer) Serialize(inv *model.Invoice) ([]byte, error) {
+func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 	buyerRef := inv.BuyerReference
 	if buyerRef == "" {
 		buyerRef = "NOT_PROVIDED"

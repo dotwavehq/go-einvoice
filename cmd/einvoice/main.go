@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dotwavehq/go-einvoice/pkg/cii"
-	"github.com/dotwavehq/go-einvoice/pkg/model"
-	"github.com/dotwavehq/go-einvoice/pkg/zugferd"
+	einvoice "github.com/dotwavehq/go-einvoice"
+	"github.com/dotwavehq/go-einvoice/cii"
+	"github.com/dotwavehq/go-einvoice/zugferd"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 		panic(fmt.Sprintf("Could not read input: %v", err))
 	}
 
-	var invoice model.Invoice
+	var invoice einvoice.Invoice
 	if err := json.Unmarshal(data, &invoice); err != nil {
 		panic(fmt.Sprintf("Invalid JSON format: %v", err))
 	}
