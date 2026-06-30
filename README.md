@@ -84,6 +84,7 @@ func main() {
                 Quantity:    toDec("10.0"),
                 UnitCode:    "HUR",
                 UnitPrice:   toDec("100.00"),
+                TaxCategory: einvoice.CategoryStandard,
                 TaxRate:     toDec("19.0"),
             },
             {
@@ -91,12 +92,11 @@ func main() {
                 Quantity:    toDec("1.0"),
                 UnitCode:    "C62",
                 UnitPrice:   toDec("50.00"),
+                TaxCategory: einvoice.CategoryStandard,
                 TaxRate:     toDec("19.0"),
             },
         },
-        
-        TaxTotal:   toDec("199.50"),
-        GrandTotal: toDec("1249.50"),
+        // Totals (net, VAT per rate, grand total) are computed from the lines.
     }
 
     // Serialize to XML (CII / XRechnung format)
@@ -118,6 +118,27 @@ func main() {
     log.Println("Successfully generated E-Invoices!")
 }
 ```
+
+### Differenzbesteuerung (§25a UStG)
+
+For margin-scheme goods (used cars, art, antiques) VAT is not shown separately.
+Use category `E` with rate `0` and the matching VATEX exemption code; the library
+emits the exemption reason (BT-120/BT-121) and the mandatory legal note (BG-1):
+
+```go
+einvoice.LineItem{
+    Description:   "Gebrauchtwagen VW Golf",
+    Quantity:      toDec("1"),
+    UnitCode:      "C62",
+    UnitPrice:     toDec("10000.00"),
+    TaxCategory:   einvoice.CategoryExempt,      // "E"
+    TaxRate:       toDec("0"),
+    ExemptionCode: einvoice.VATExSecondHandGoods, // VATEX-EU-F → "Gebrauchtgegenstände/Sonderregelung"
+}
+```
+
+Mixing rates on one invoice (e.g. a margin-scheme car plus a 19% delivery fee) is
+supported — each (category, rate) combination becomes its own VAT breakdown group.
 
 ## CLI Usage
 

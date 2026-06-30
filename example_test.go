@@ -19,10 +19,9 @@ func ExampleInvoice() {
 			Quantity:    decimal.NewFromInt(10),
 			UnitCode:    "HUR",
 			UnitPrice:   decimal.RequireFromString("100.00"),
+			TaxCategory: einvoice.CategoryStandard,
 			TaxRate:     decimal.NewFromInt(19),
 		}},
-		TaxTotal:   decimal.RequireFromString("190.00"),
-		GrandTotal: decimal.RequireFromString("1190.00"),
 	}
 
 	xmlBytes, err := cii.NewSerializer().Serialize(inv)

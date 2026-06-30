@@ -23,7 +23,7 @@ type ExchangedDocument struct {
 	ID           string   `xml:"ram:ID"`
 	TypeCode     string   `xml:"ram:TypeCode"`
 	IssueDate    DateType `xml:"ram:IssueDateTime>udt:DateTimeString"`
-	IncludedNote *Note    `xml:"ram:IncludedNote,omitempty"`
+	IncludedNote []Note   `xml:"ram:IncludedNote,omitempty"`
 }
 
 type IDType struct {

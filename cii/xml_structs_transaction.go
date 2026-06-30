@@ -100,8 +100,10 @@ type PayeeAccount struct {
 type TradeTax struct {
 	CalculatedAmount      *Amount `xml:"ram:CalculatedAmount,omitempty"`
 	TypeCode              string  `xml:"ram:TypeCode"`
+	ExemptionReason       string  `xml:"ram:ExemptionReason,omitempty"`
 	BasisAmount           *Amount `xml:"ram:BasisAmount,omitempty"`
 	CategoryCode          string  `xml:"ram:CategoryCode"`
+	ExemptionReasonCode   string  `xml:"ram:ExemptionReasonCode,omitempty"`
 	RateApplicablePercent string  `xml:"ram:RateApplicablePercent"`
 }
 

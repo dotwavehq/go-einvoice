@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	einvoice "github.com/dotwavehq/go-einvoice"
+	"github.com/shopspring/decimal"
 )
 
 type CIISerializer struct{}
@@ -97,7 +98,7 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 			Settlement: LineSettlement{
 				Tax: TradeTax{
 					TypeCode:              "VAT",
-					CategoryCode:          "S",
+					CategoryCode:          categoryOf(item),
 					RateApplicablePercent: fmtAmount2(item.TaxRate),
 				},
 				Summation: LineMonetarySummation{
@@ -108,23 +109,35 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		xmlLines = append(xmlLines, xmlLine)
 	}
 
-	tradeTax := TradeTax{
-		CalculatedAmount:      &Amount{Value: fmtAmount2(inv.TaxTotal)},
-		TypeCode:              "VAT",
-		BasisAmount:           &Amount{Value: fmtAmount2(inv.GrandTotal.Sub(inv.TaxTotal))},
-		CategoryCode:          "S",
-		RateApplicablePercent: "19.00",
+	// One VAT breakdown (BG-23) per (category, rate); totals are computed from
+	// the lines so they always reconcile (BR-CO-10..17).
+	groups := taxBreakdown(inv)
+	lineTotal, taxTotal := decimal.Zero, decimal.Zero
+	tradeTaxes := make([]TradeTax, 0, len(groups))
+	for _, g := range groups {
+		lineTotal = lineTotal.Add(g.basis)
+		taxTotal = taxTotal.Add(g.tax)
+		tradeTaxes = append(tradeTaxes, TradeTax{
+			CalculatedAmount:      &Amount{Value: fmtAmount2(g.tax)},
+			TypeCode:              "VAT",
+			ExemptionReason:       g.exReason,
+			BasisAmount:           &Amount{Value: fmtAmount2(g.basis)},
+			CategoryCode:          g.category,
+			ExemptionReasonCode:   g.exCode,
+			RateApplicablePercent: fmtAmount2(g.rate),
+		})
 	}
+	grandTotal := lineTotal.Add(taxTotal)
 
 	settlement := Settlement{
 		InvoiceCurrency:      inv.Currency,
-		ApplicableTradeTaxes: []TradeTax{tradeTax},
+		ApplicableTradeTaxes: tradeTaxes,
 		MonetarySummation: MonetarySummation{
-			LineTotalAmount:      Amount{Value: fmtAmount2(inv.GrandTotal.Sub(inv.TaxTotal))},
-			TaxBasisTotalAmount:  Amount{Value: fmtAmount2(inv.GrandTotal.Sub(inv.TaxTotal))},
-			TaxTotalAmount:       AmountWithCurrency{Value: fmtAmount2(inv.TaxTotal), Currency: inv.Currency},
-			GrandTotalAmount:     Amount{Value: fmtAmount2(inv.GrandTotal)},
-			DuePayableAmount:     Amount{Value: fmtAmount2(inv.GrandTotal)},
+			LineTotalAmount:      Amount{Value: fmtAmount2(lineTotal)},
+			TaxBasisTotalAmount:  Amount{Value: fmtAmount2(lineTotal)},
+			TaxTotalAmount:       AmountWithCurrency{Value: fmtAmount2(taxTotal), Currency: inv.Currency},
+			GrandTotalAmount:     Amount{Value: fmtAmount2(grandTotal)},
+			DuePayableAmount:     Amount{Value: fmtAmount2(grandTotal)},
 			ChargeTotalAmount:    Amount{Value: "0.00"},
 			AllowanceTotalAmount: Amount{Value: "0.00"},
 		},
@@ -158,6 +171,20 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		}
 	}
 
+	// BG-1 notes: the free-text note plus the mandatory legal wording for each
+	// exemption reason present (e.g. §25a "Gebrauchtgegenstände/Sonderregelung").
+	var notes []Note
+	if inv.Note != "" {
+		notes = append(notes, Note{Content: inv.Note})
+	}
+	seen := map[string]bool{}
+	for _, g := range groups {
+		if g.exReason != "" && !seen[g.exReason] {
+			seen[g.exReason] = true
+			notes = append(notes, Note{Content: g.exReason})
+		}
+	}
+
 	invoice := CrossIndustryInvoice{
 		Rsm: Rsmns,
 		Ram: Ramns,
@@ -173,7 +200,7 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 				Value:  inv.IssueDate.Format("20060102"),
 				Format: DateFormatYYYYMMDD,
 			},
-			IncludedNote: &Note{Content: inv.Note},
+			IncludedNote: notes,
 		},
 		Transaction: SupplyChainTradeTransaction{
 			IncludedLineItems: xmlLines,

@@ -33,8 +33,6 @@ func sampleInvoice() *einvoice.Invoice {
 			UnitPrice:   dec("100.00"),
 			TaxRate:     dec("19"),
 		}},
-		TaxTotal:   dec("190.00"),
-		GrandTotal: dec("1190.00"),
 	}
 }
 
@@ -72,5 +70,60 @@ func TestSerializeBuyerReferenceFallback(t *testing.T) {
 	}
 	if !strings.Contains(string(out), "NOT_PROVIDED") {
 		t.Error("empty BuyerReference should fall back to NOT_PROVIDED")
+	}
+}
+
+// Car-dealer case: a margin-scheme used car (§25a, category E) plus a standard
+// 19% delivery fee — a mixed-rate invoice that the single-breakdown code could
+// not represent.
+func TestSerializeMarginSchemeMixedRate(t *testing.T) {
+	inv := &einvoice.Invoice{
+		Number:   "RE-2025-2002",
+		Currency: "EUR",
+		Seller:   einvoice.Party{Name: "Autohaus GmbH", CountryCode: "DE", VATID: "DE123456789"},
+		Buyer:    einvoice.Party{Name: "Käufer", CountryCode: "DE"},
+		LineItems: []einvoice.LineItem{
+			{
+				Description:   "Gebrauchtwagen VW Golf",
+				Quantity:      dec("1"),
+				UnitCode:      "C62",
+				UnitPrice:     dec("10000.00"),
+				TaxCategory:   einvoice.CategoryExempt,
+				TaxRate:       dec("0"),
+				ExemptionCode: einvoice.VATExSecondHandGoods,
+			},
+			{
+				Description: "Überführung",
+				Quantity:    dec("1"),
+				UnitCode:    "C62",
+				UnitPrice:   dec("100.00"),
+				TaxCategory: einvoice.CategoryStandard,
+				TaxRate:     dec("19"),
+			},
+		},
+	}
+
+	out, err := cii.NewSerializer().Serialize(inv)
+	if err != nil {
+		t.Fatalf("Serialize: %v", err)
+	}
+	s := string(out)
+
+	for _, want := range []string{
+		"<ram:CategoryCode>E</ram:CategoryCode>", // margin-scheme group
+		"<ram:CategoryCode>S</ram:CategoryCode>", // standard 19% group
+		"<ram:ExemptionReasonCode>VATEX-EU-F</ram:ExemptionReasonCode>",
+		"Gebrauchtgegenstände/Sonderregelung",                   // BT-120 + BG-1 note
+		"<ram:GrandTotalAmount>10119.00</ram:GrandTotalAmount>", // 10000 + 100 + 19 VAT
+		"<ram:TaxTotalAmount currencyID=\"EUR\">19.00</ram:TaxTotalAmount>",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("output missing %q", want)
+		}
+	}
+
+	// VAT must not be charged on the margin-scheme line: its breakdown tax is 0.
+	if !strings.Contains(s, "<ram:CalculatedAmount>0.00</ram:CalculatedAmount>") {
+		t.Error("margin-scheme group must have CalculatedAmount 0.00")
 	}
 }
