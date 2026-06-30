@@ -10,6 +10,7 @@ type Invoice struct {
 	Number         string
 	IssueDate      time.Time
 	DueDate        time.Time
+	DeliveryDate   time.Time // BT-72 Leistungs-/Lieferdatum (UStG mandatory)
 	Currency       string
 	Note           string
 	BuyerReference string
@@ -28,6 +29,13 @@ type Party struct {
 	CountryCode string
 	VATID       string
 	Contact     *Contact
+
+	// ElectronicAddress is the party's electronic address (BT-34 seller / BT-49
+	// buyer), mandatory in XRechnung. ElectronicAddressScheme is its EAS code
+	// (e.g. "EM" email, "9930" German VAT, "0204" Leitweg-ID); defaults to "EM".
+	// If ElectronicAddress is empty, Contact.Email is used as an "EM" fallback.
+	ElectronicAddress       string
+	ElectronicAddressScheme string
 }
 
 type Contact struct {

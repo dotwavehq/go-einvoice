@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
 
 	einvoice "github.com/dotwavehq/go-einvoice"
 	"github.com/dotwavehq/go-einvoice/cii"
@@ -23,8 +24,9 @@ func sampleInvoice() *einvoice.Invoice {
 		Number:         "RE-2025-1001",
 		Currency:       "EUR",
 		BuyerReference: "ORDER-12345",
-		Seller:         einvoice.Party{Name: "Seller GmbH", CountryCode: "DE", VATID: "DE123456789"},
-		Buyer:          einvoice.Party{Name: "Buyer AG", CountryCode: "DE"},
+		DeliveryDate:   time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC),
+		Seller:         einvoice.Party{Name: "Seller GmbH", CountryCode: "DE", VATID: "DE123456789", ElectronicAddress: "seller@example.de"},
+		Buyer:          einvoice.Party{Name: "Buyer AG", CountryCode: "DE", ElectronicAddress: "buyer@example.de"},
 		Payment:        einvoice.Payment{IBAN: "DE89370400440532013000"},
 		LineItems: []einvoice.LineItem{{
 			Description: "Consulting",
@@ -54,6 +56,8 @@ func TestSerialize(t *testing.T) {
 		"DE89370400440532013000", // IBAN
 		"<ram:GrandTotalAmount>1190.00</ram:GrandTotalAmount>",
 		"<ram:TaxTotalAmount currencyID=\"EUR\">190.00</ram:TaxTotalAmount>",
+		"<ram:URIID schemeID=\"EM\">buyer@example.de</ram:URIID>", // BT-49 buyer electronic address
+		"<ram:OccurrenceDateTime>",                                // BT-72 delivery date
 	} {
 		if !strings.Contains(string(out), want) {
 			t.Errorf("output missing %q", want)

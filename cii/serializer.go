@@ -20,18 +20,6 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		buyerRef = "NOT_PROVIDED"
 	}
 
-	createElectronicAddress := func(vatID string) *UniversalCommunication {
-		if vatID == "" {
-			return nil
-		}
-		return &UniversalCommunication{
-			URIID: &IDWithScheme{
-				Value:    vatID,
-				SchemeID: "EM",
-			},
-		}
-	}
-
 	agreement := Agreement{
 		BuyerReference: buyerRef,
 		Seller: TradeParty{
@@ -45,7 +33,7 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 			TaxRegistration: &TaxRegistration{
 				ID: TaxID{Value: inv.Seller.VATID, SchemeID: "VA"},
 			},
-			ElectronicURI: createElectronicAddress(inv.Seller.VATID),
+			ElectronicURI: electronicAddress(inv.Seller),
 		},
 		Buyer: TradeParty{
 			Name: inv.Buyer.Name,
@@ -55,7 +43,7 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 				CityName:  inv.Buyer.City,
 				CountryID: inv.Buyer.CountryCode,
 			},
-			ElectronicURI: createElectronicAddress(inv.Buyer.VATID),
+			ElectronicURI: electronicAddress(inv.Buyer),
 		},
 	}
 
@@ -185,6 +173,17 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		}
 	}
 
+	// BT-72 actual delivery date (Leistungs-/Lieferdatum).
+	var delivery Delivery
+	if !inv.DeliveryDate.IsZero() {
+		delivery.Occurrence = &Occurrence{
+			OccurrenceDate: DateType{
+				Value:  inv.DeliveryDate.Format("20060102"),
+				Format: DateFormatYYYYMMDD,
+			},
+		}
+	}
+
 	invoice := CrossIndustryInvoice{
 		Rsm: Rsmns,
 		Ram: Ramns,
@@ -205,6 +204,7 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		Transaction: SupplyChainTradeTransaction{
 			IncludedLineItems: xmlLines,
 			Agreement:         agreement,
+			Delivery:          delivery,
 			Settlement:        settlement,
 		},
 	}
