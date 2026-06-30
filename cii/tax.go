@@ -42,6 +42,16 @@ func lineNet(li einvoice.LineItem) decimal.Decimal {
 	return li.Quantity.Mul(li.UnitPrice)
 }
 
+// hasCategory reports whether any line uses the given VAT category.
+func hasCategory(inv *einvoice.Invoice, cat einvoice.TaxCategory) bool {
+	for _, li := range inv.LineItems {
+		if categoryOf(li) == string(cat) {
+			return true
+		}
+	}
+	return false
+}
+
 // taxBreakdown groups the invoice lines into VAT breakdown entries, one per
 // (category, rate), summing the taxable basis and computing the tax per group.
 func taxBreakdown(inv *einvoice.Invoice) []taxGroup {

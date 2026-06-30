@@ -143,6 +143,10 @@ einvoice.LineItem{
 Mixing rates on one invoice (e.g. a margin-scheme car plus a 19% delivery fee) is
 supported — each (category, rate) combination becomes its own VAT breakdown group.
 
+Other categories work the same way: `CategoryIntraCommunity` (`K`, tax-free EU
+supply — a deliver-to address is added automatically) and `CategoryReverseCharge`
+(`AE`, §13b) with their matching `VATEx*` exemption codes.
+
 ## CLI Usage
 
 ### Generate XML

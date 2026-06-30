@@ -131,3 +131,59 @@ func TestSerializeMarginSchemeMixedRate(t *testing.T) {
 		t.Error("margin-scheme group must have CalculatedAmount 0.00")
 	}
 }
+
+// New car sold tax-free to an EU business (intra-community supply, category K).
+// Requires a deliver-to address (BG-15), which defaults to the buyer's.
+func TestSerializeIntraCommunity(t *testing.T) {
+	inv := &einvoice.Invoice{
+		Number: "RE-IC-1", Currency: "EUR",
+		DeliveryDate: time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC),
+		Seller:       einvoice.Party{Name: "Autohaus GmbH", CountryCode: "DE", VATID: "DE123456789", ElectronicAddress: "s@a.de"},
+		Buyer:        einvoice.Party{Name: "Garage Paris", Street: "Rue 1", City: "Paris", PostalCode: "75001", CountryCode: "FR", VATID: "FR12345678901", ElectronicAddress: "b@g.fr"},
+		LineItems: []einvoice.LineItem{{
+			Description: "Neuwagen", Quantity: dec("1"), UnitCode: "C62", UnitPrice: dec("25000.00"),
+			TaxCategory: einvoice.CategoryIntraCommunity, TaxRate: dec("0"), ExemptionCode: einvoice.VATExIntraCommunity,
+		}},
+	}
+	out, err := cii.NewSerializer().Serialize(inv)
+	if err != nil {
+		t.Fatalf("Serialize: %v", err)
+	}
+	for _, want := range []string{
+		"<ram:CategoryCode>K</ram:CategoryCode>",
+		"<ram:ExemptionReasonCode>VATEX-EU-IC</ram:ExemptionReasonCode>",
+		"<ram:ShipToTradeParty>", // BG-15 deliver-to address
+		"<ram:CountryID>FR</ram:CountryID>",
+		"<ram:GrandTotalAmount>25000.00</ram:GrandTotalAmount>", // tax-free
+	} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("output missing %q", want)
+		}
+	}
+}
+
+// Reverse charge (§13b): VAT owed by the recipient, category AE, rate 0.
+func TestSerializeReverseCharge(t *testing.T) {
+	inv := &einvoice.Invoice{
+		Number: "RE-AE-1", Currency: "EUR",
+		Seller: einvoice.Party{Name: "Seller", CountryCode: "DE", VATID: "DE123456789", ElectronicAddress: "s@a.de"},
+		Buyer:  einvoice.Party{Name: "Buyer", CountryCode: "DE", VATID: "DE987654321", ElectronicAddress: "b@b.de"},
+		LineItems: []einvoice.LineItem{{
+			Description: "Leistung", Quantity: dec("1"), UnitCode: "C62", UnitPrice: dec("5000.00"),
+			TaxCategory: einvoice.CategoryReverseCharge, TaxRate: dec("0"), ExemptionCode: einvoice.VATExReverseCharge,
+		}},
+	}
+	out, err := cii.NewSerializer().Serialize(inv)
+	if err != nil {
+		t.Fatalf("Serialize: %v", err)
+	}
+	for _, want := range []string{
+		"<ram:CategoryCode>AE</ram:CategoryCode>",
+		"Steuerschuldnerschaft des Leistungsempfängers", // BG-1 note + BT-120
+		"<ram:GrandTotalAmount>5000.00</ram:GrandTotalAmount>",
+	} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("output missing %q", want)
+		}
+	}
+}

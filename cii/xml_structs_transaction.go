@@ -68,6 +68,7 @@ type TaxID struct {
 }
 
 type Delivery struct {
+	ShipTo     *TradeParty `xml:"ram:ShipToTradeParty,omitempty"`
 	Occurrence *Occurrence `xml:"ram:ActualDeliverySupplyChainEvent,omitempty"`
 }
 

@@ -7,13 +7,16 @@ import (
 )
 
 type Invoice struct {
-	Number         string
-	IssueDate      time.Time
-	DueDate        time.Time
-	DeliveryDate   time.Time // BT-72 Leistungs-/Lieferdatum (UStG mandatory)
-	Currency       string
-	Note           string
-	BuyerReference string
+	Number       string
+	IssueDate    time.Time
+	DueDate      time.Time
+	DeliveryDate time.Time // BT-72 Leistungs-/Lieferdatum (UStG mandatory)
+	// DeliveryCountryCode is the deliver-to country (BT-80). Mandatory for
+	// intra-community supply (category K); defaults to the buyer's country.
+	DeliveryCountryCode string
+	Currency            string
+	Note                string
+	BuyerReference      string
 
 	Seller    Party
 	Buyer     Party

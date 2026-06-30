@@ -173,8 +173,26 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		}
 	}
 
-	// BT-72 actual delivery date (Leistungs-/Lieferdatum).
+	// Deliver-to address (BG-15) is mandatory for intra-community supply
+	// (BR-IC-12). It defaults to the buyer's address; DeliveryCountryCode
+	// overrides only the country (BT-80). XRechnung also requires city (BT-77)
+	// and post code (BT-78) once the address is present.
 	var delivery Delivery
+	if inv.DeliveryCountryCode != "" || hasCategory(inv, einvoice.CategoryIntraCommunity) {
+		country := inv.DeliveryCountryCode
+		if country == "" {
+			country = inv.Buyer.CountryCode
+		}
+		delivery.ShipTo = &TradeParty{
+			Name: inv.Buyer.Name,
+			PostalAddress: TradeAddress{
+				Postcode:  inv.Buyer.PostalCode,
+				LineOne:   inv.Buyer.Street,
+				CityName:  inv.Buyer.City,
+				CountryID: country,
+			},
+		}
+	}
 	if !inv.DeliveryDate.IsZero() {
 		delivery.Occurrence = &Occurrence{
 			OccurrenceDate: DateType{
