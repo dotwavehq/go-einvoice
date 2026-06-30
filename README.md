@@ -1,5 +1,10 @@
 # go-einvoice
 
+[![CI](https://github.com/dotwavehq/go-einvoice/actions/workflows/ci.yml/badge.svg)](https://github.com/dotwavehq/go-einvoice/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/dotwavehq/go-einvoice.svg)](https://pkg.go.dev/github.com/dotwavehq/go-einvoice)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dotwavehq/go-einvoice)](https://goreportcard.com/report/github.com/dotwavehq/go-einvoice)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+
 A Go library for generating German E-Invoices (E-Rechnung) compliant with EN 16931.
 
 This library is designed to help developers upgrade their invoicing systems for the upcoming German B2B mandates starting January 1st, 2025. It supports the creation of XRechnung 3.0 (XML) and ZUGFeRD / Factur-X (PDF/A-3 with embedded XML).
