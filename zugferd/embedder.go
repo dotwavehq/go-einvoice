@@ -3,85 +3,56 @@ package zugferd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// FacturXFileName is the mandatory filename for the XML attachment in ZUGFeRD.
+// FacturXFileName is the mandatory filename for the XML attachment in
+// ZUGFeRD / Factur-X.
 const FacturXFileName = "factur-x.xml"
 
-// EmbedXML attaches the generated XML bytes to an existing PDF file.
-// It creates a ZUGFeRD compatible PDF (visual + XML data).
+// EmbedXML produces a ZUGFeRD / Factur-X PDF/A-3 by embedding the invoice XML
+// into an existing PDF: it attaches the XML as the associated file
+// factur-x.xml and writes the PDF/A identifier, the Factur-X document
+// metadata, and an sRGB output intent.
 //
-// Note: To be fully compliant with standard validation (PDF/A-3),
-// the input PDF should ideally already be valid PDF/A.
-// This function handles the file attachment structure.
+// The XML stays extractable as an ordinary PDF attachment, so a recipient can
+// process either the visual PDF or the structured data.
+//
+// EmbedXML adds the PDF/A-3 structure but does not repair the visual content:
+// the input PDF must already embed its fonts and use device RGB. A PDF
+// rendered by headless Chromium ("print to PDF") satisfies this. To confirm
+// full conformance, validate the output with veraPDF.
 func EmbedXML(inputPDFPath string, xmlContent []byte, outputPDFPath string) error {
-	tmpDir, err := os.MkdirTemp("", "go-einvoice")
+	in, err := os.Open(inputPDFPath)
 	if err != nil {
-		return fmt.Errorf("failed to create temp dir: %w", err)
+		return fmt.Errorf("open input pdf: %w", err)
 	}
-	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	tmpXMLPath := filepath.Join(tmpDir, FacturXFileName)
-	if err := os.WriteFile(tmpXMLPath, xmlContent, 0644); err != nil {
-		return fmt.Errorf("failed to write temp xml: %w", err)
-	}
+	defer func() { _ = in.Close() }()
 
 	conf := model.NewDefaultConfiguration()
+	conf.Cmd = model.ADDATTACHMENTS
 
-	err = api.AddAttachmentsFile(
-		inputPDFPath,
-		outputPDFPath,
-		[]string{tmpXMLPath},
-		true,
-		conf,
-	)
-
+	ctx, err := api.ReadValidateAndOptimize(in, conf)
 	if err != nil {
-		return fmt.Errorf("pdfcpu failed to attach file: %w", err)
+		return fmt.Errorf("read input pdf: %w", err)
+	}
+
+	if err := applyPDFA3(ctx, xmlContent, ConformanceLevelEN16931, time.Now()); err != nil {
+		return fmt.Errorf("apply pdf/a-3: %w", err)
+	}
+
+	out, err := os.Create(outputPDFPath)
+	if err != nil {
+		return fmt.Errorf("create output pdf: %w", err)
+	}
+	defer func() { _ = out.Close() }()
+
+	if err := api.Write(ctx, out, conf); err != nil {
+		return fmt.Errorf("write output pdf: %w", err)
 	}
 
 	return nil
-}
-
-// GenerateXMPTemplate returns the RDF metadata required for a valid PDF/A-3 ZUGFeRD file.
-func GenerateXMPTemplate() string {
-	return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/">
-  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description rdf:about="" xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#">
-      <zf:DocumentType>INVOICE</zf:DocumentType>
-      <zf:DocumentFileName>factur-x.xml</zf:DocumentFileName>
-      <zf:Version>1.0</zf:Version>
-      <zf:ConformanceLevel>EN 16931</zf:ConformanceLevel>
-    </rdf:Description>
-    <rdf:Description rdf:about="" xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-       xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-       xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#">
-      <pdfaExtension:schemas>
-        <rdf:Bag>
-          <rdf:li rdf:parseType="Resource">
-            <pdfaSchema:schema>ZUGFeRD PDFA Extension Schema</pdfaSchema:schema>
-            <pdfaSchema:namespaceURI>urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
-            <pdfaSchema:prefix>zf</pdfaSchema:prefix>
-            <pdfaSchema:property>
-              <rdf:Seq>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>name of the embedded XML invoice file</pdfaProperty:description>
-                </rdf:li>
-              </rdf:Seq>
-            </pdfaSchema:property>
-          </rdf:li>
-        </rdf:Bag>
-      </pdfaExtension:schemas>
-    </rdf:Description>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end="w"?>`
 }
