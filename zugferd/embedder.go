@@ -23,7 +23,7 @@ func EmbedXML(inputPDFPath string, xmlContent []byte, outputPDFPath string) erro
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	tmpXMLPath := filepath.Join(tmpDir, FacturXFileName)
 	if err := os.WriteFile(tmpXMLPath, xmlContent, 0644); err != nil {
