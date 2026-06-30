@@ -57,17 +57,33 @@ func hasCategory(inv *einvoice.Invoice, cat einvoice.TaxCategory) bool {
 func taxBreakdown(inv *einvoice.Invoice) []taxGroup {
 	var groups []taxGroup
 	index := map[string]int{}
-	for _, li := range inv.LineItems {
-		cat := categoryOf(li)
-		key := cat + "|" + li.TaxRate.String()
+	group := func(cat string, rate decimal.Decimal, code, reason string) int {
+		key := cat + "|" + rate.String()
 		i, ok := index[key]
 		if !ok {
-			code, reason := exemptionOf(li)
-			groups = append(groups, taxGroup{category: cat, rate: li.TaxRate, exCode: code, exReason: reason})
+			groups = append(groups, taxGroup{category: cat, rate: rate, exCode: code, exReason: reason})
 			i = len(groups) - 1
 			index[key] = i
 		}
+		return i
+	}
+	for _, li := range inv.LineItems {
+		code, reason := exemptionOf(li)
+		i := group(categoryOf(li), li.TaxRate, code, reason)
 		groups[i].basis = groups[i].basis.Add(lineNet(li))
+	}
+	// Document-level allowances reduce, charges add to their group's basis.
+	for _, ac := range inv.AllowanceCharges {
+		cat := string(ac.TaxCategory)
+		if cat == "" {
+			cat = string(einvoice.CategoryStandard)
+		}
+		i := group(cat, ac.TaxRate, "", "")
+		if ac.IsCharge {
+			groups[i].basis = groups[i].basis.Add(ac.Amount)
+		} else {
+			groups[i].basis = groups[i].basis.Sub(ac.Amount)
+		}
 	}
 	for i := range groups {
 		groups[i].tax = groups[i].basis.Mul(groups[i].rate).Div(hundred).Round(2)

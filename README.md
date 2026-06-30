@@ -147,6 +147,9 @@ Other categories work the same way: `CategoryIntraCommunity` (`K`, tax-free EU
 supply — a deliver-to address is added automatically) and `CategoryReverseCharge`
 (`AE`, §13b) with their matching `VATEx*` exemption codes.
 
+Document-level discounts and surcharges go in `Invoice.AllowanceCharges`
+(`AllowanceCharge`, BG-20/21); they adjust the taxable basis of their VAT group.
+
 ## CLI Usage
 
 ### Generate XML

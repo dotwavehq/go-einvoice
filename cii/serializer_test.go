@@ -132,6 +132,32 @@ func TestSerializeMarginSchemeMixedRate(t *testing.T) {
 	}
 }
 
+// Standard sale with a document-level discount (allowance): the discount reduces
+// the taxable basis, so VAT is charged on the net-of-discount amount.
+func TestSerializeAllowance(t *testing.T) {
+	inv := sampleInvoice() // 10 * 100 = 1000 net @ 19%
+	inv.AllowanceCharges = []einvoice.AllowanceCharge{{
+		Amount: dec("100.00"), TaxCategory: einvoice.CategoryStandard, TaxRate: dec("19"), Reason: "Treuerabatt",
+	}}
+	out, err := cii.NewSerializer().Serialize(inv)
+	if err != nil {
+		t.Fatalf("Serialize: %v", err)
+	}
+	for _, want := range []string{
+		"<udt:Indicator>false</udt:Indicator>", // allowance, not charge
+		"<ram:ActualAmount>100.00</ram:ActualAmount>",
+		"Treuerabatt",
+		"<ram:AllowanceTotalAmount>100.00</ram:AllowanceTotalAmount>",
+		"<ram:TaxBasisTotalAmount>900.00</ram:TaxBasisTotalAmount>",          // 1000 - 100
+		"<ram:TaxTotalAmount currencyID=\"EUR\">171.00</ram:TaxTotalAmount>", // 900 * 19%
+		"<ram:GrandTotalAmount>1071.00</ram:GrandTotalAmount>",
+	} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("output missing %q", want)
+		}
+	}
+}
+
 // New car sold tax-free to an EU business (intra-community supply, category K).
 // Requires a deliver-to address (BG-15), which defaults to the buyer's.
 func TestSerializeIntraCommunity(t *testing.T) {

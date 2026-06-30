@@ -97,13 +97,13 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		xmlLines = append(xmlLines, xmlLine)
 	}
 
-	// One VAT breakdown (BG-23) per (category, rate); totals are computed from
-	// the lines so they always reconcile (BR-CO-10..17).
+	// One VAT breakdown (BG-23) per (category, rate); totals are computed so they
+	// always reconcile (BR-CO-10..17). Group basis already reflects document
+	// allowances/charges; the line total is the sum of line nets only.
 	groups := taxBreakdown(inv)
-	lineTotal, taxTotal := decimal.Zero, decimal.Zero
+	taxTotal := decimal.Zero
 	tradeTaxes := make([]TradeTax, 0, len(groups))
 	for _, g := range groups {
-		lineTotal = lineTotal.Add(g.basis)
 		taxTotal = taxTotal.Add(g.tax)
 		tradeTaxes = append(tradeTaxes, TradeTax{
 			CalculatedAmount:      &Amount{Value: fmtAmount2(g.tax)},
@@ -115,19 +115,49 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 			RateApplicablePercent: fmtAmount2(g.rate),
 		})
 	}
-	grandTotal := lineTotal.Add(taxTotal)
+
+	lineTotal := decimal.Zero
+	for _, li := range inv.LineItems {
+		lineTotal = lineTotal.Add(lineNet(li))
+	}
+	allowanceTotal, chargeTotal := decimal.Zero, decimal.Zero
+	var allowanceCharges []TradeAllowanceCharge
+	for _, ac := range inv.AllowanceCharges {
+		cat := string(ac.TaxCategory)
+		if cat == "" {
+			cat = string(einvoice.CategoryStandard)
+		}
+		if ac.IsCharge {
+			chargeTotal = chargeTotal.Add(ac.Amount)
+		} else {
+			allowanceTotal = allowanceTotal.Add(ac.Amount)
+		}
+		allowanceCharges = append(allowanceCharges, TradeAllowanceCharge{
+			ChargeIndicator: Indicator{Value: ac.IsCharge},
+			ActualAmount:    fmtAmount2(ac.Amount),
+			Reason:          ac.Reason,
+			CategoryTax: CategoryTradeTax{
+				TypeCode:              "VAT",
+				CategoryCode:          cat,
+				RateApplicablePercent: fmtAmount2(ac.TaxRate),
+			},
+		})
+	}
+	taxBasisTotal := lineTotal.Sub(allowanceTotal).Add(chargeTotal)
+	grandTotal := taxBasisTotal.Add(taxTotal)
 
 	settlement := Settlement{
 		InvoiceCurrency:      inv.Currency,
 		ApplicableTradeTaxes: tradeTaxes,
+		AllowanceCharges:     allowanceCharges,
 		MonetarySummation: MonetarySummation{
 			LineTotalAmount:      Amount{Value: fmtAmount2(lineTotal)},
-			TaxBasisTotalAmount:  Amount{Value: fmtAmount2(lineTotal)},
+			TaxBasisTotalAmount:  Amount{Value: fmtAmount2(taxBasisTotal)},
 			TaxTotalAmount:       AmountWithCurrency{Value: fmtAmount2(taxTotal), Currency: inv.Currency},
 			GrandTotalAmount:     Amount{Value: fmtAmount2(grandTotal)},
 			DuePayableAmount:     Amount{Value: fmtAmount2(grandTotal)},
-			ChargeTotalAmount:    Amount{Value: "0.00"},
-			AllowanceTotalAmount: Amount{Value: "0.00"},
+			ChargeTotalAmount:    Amount{Value: fmtAmount2(chargeTotal)},
+			AllowanceTotalAmount: Amount{Value: fmtAmount2(allowanceTotal)},
 		},
 	}
 

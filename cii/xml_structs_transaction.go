@@ -77,12 +77,30 @@ type Occurrence struct {
 }
 
 type Settlement struct {
-	InvoiceCurrency      string            `xml:"ram:InvoiceCurrencyCode"`
-	PaymentMeans         *PaymentMeans     `xml:"ram:SpecifiedTradeSettlementPaymentMeans,omitempty"`
-	ApplicableTradeTaxes []TradeTax        `xml:"ram:ApplicableTradeTax"`
-	BillingPeriod        *BillingPeriod    `xml:"ram:BillingSpecifiedPeriod,omitempty"`
-	PaymentTerms         *PaymentTerms     `xml:"ram:SpecifiedTradePaymentTerms,omitempty"`
-	MonetarySummation    MonetarySummation `xml:"ram:SpecifiedTradeSettlementHeaderMonetarySummation"`
+	InvoiceCurrency      string                 `xml:"ram:InvoiceCurrencyCode"`
+	PaymentMeans         *PaymentMeans          `xml:"ram:SpecifiedTradeSettlementPaymentMeans,omitempty"`
+	ApplicableTradeTaxes []TradeTax             `xml:"ram:ApplicableTradeTax"`
+	BillingPeriod        *BillingPeriod         `xml:"ram:BillingSpecifiedPeriod,omitempty"`
+	AllowanceCharges     []TradeAllowanceCharge `xml:"ram:SpecifiedTradeAllowanceCharge,omitempty"`
+	PaymentTerms         *PaymentTerms          `xml:"ram:SpecifiedTradePaymentTerms,omitempty"`
+	MonetarySummation    MonetarySummation      `xml:"ram:SpecifiedTradeSettlementHeaderMonetarySummation"`
+}
+
+type TradeAllowanceCharge struct {
+	ChargeIndicator Indicator        `xml:"ram:ChargeIndicator"`
+	ActualAmount    string           `xml:"ram:ActualAmount"`
+	Reason          string           `xml:"ram:Reason,omitempty"`
+	CategoryTax     CategoryTradeTax `xml:"ram:CategoryTradeTax"`
+}
+
+type Indicator struct {
+	Value bool `xml:"udt:Indicator"`
+}
+
+type CategoryTradeTax struct {
+	TypeCode              string `xml:"ram:TypeCode"`
+	CategoryCode          string `xml:"ram:CategoryCode"`
+	RateApplicablePercent string `xml:"ram:RateApplicablePercent"`
 }
 
 type PaymentTerms struct {

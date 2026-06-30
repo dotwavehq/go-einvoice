@@ -1,5 +1,18 @@
 package einvoice
 
+import "github.com/shopspring/decimal"
+
+// AllowanceCharge is a document-level allowance (discount) or charge (BG-20 /
+// BG-21). Its TaxCategory and TaxRate must match the goods they apply to so the
+// amount lands in the right VAT breakdown group. Reason is required by XRechnung.
+type AllowanceCharge struct {
+	Amount      decimal.Decimal
+	IsCharge    bool // false = allowance (reduces total), true = charge (adds)
+	TaxCategory TaxCategory
+	TaxRate     decimal.Decimal
+	Reason      string
+}
+
 // TaxCategory is an EN 16931 / UNTDID 5305 VAT category code (BT-118 / BT-151).
 type TaxCategory string
 

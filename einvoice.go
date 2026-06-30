@@ -18,10 +18,11 @@ type Invoice struct {
 	Note                string
 	BuyerReference      string
 
-	Seller    Party
-	Buyer     Party
-	Payment   Payment
-	LineItems []LineItem
+	Seller           Party
+	Buyer            Party
+	Payment          Payment
+	LineItems        []LineItem
+	AllowanceCharges []AllowanceCharge // document-level allowances/charges (BG-20/21)
 }
 
 type Party struct {
