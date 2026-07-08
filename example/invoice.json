@@ -33,7 +33,14 @@
     "IBAN": "DE99500500501234567890",
     "BIC": "NODEDEXX",
     "AccountHolder": "Autohaus Muster GmbH",
-    "PaymentMeansCode": "30"
+    "PaymentMeansCode": "30",
+    "AdditionalAccounts": [
+      {
+        "IBAN": "DE02500105170137075030",
+        "BIC": "INGDDEFFXXX",
+        "AccountHolder": "Autohaus Muster GmbH"
+      }
+    ]
   },
   "LineItems": [
     {

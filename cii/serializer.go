@@ -161,16 +161,24 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		},
 	}
 
-	if inv.Payment.IBAN != "" {
-		settlement.PaymentMeans = &PaymentMeans{
-			TypeCode: "30",
-			PayeeAccount: &PayeeAccount{
-				IBANID: inv.Payment.IBAN,
-			},
+	// One SpecifiedTradeSettlementPaymentMeans per payee account — BG-17
+	// CREDIT TRANSFER is 0..n, all sharing the payment means type code.
+	typeCode := "30"
+	if inv.Payment.PaymentMeansCode != "" {
+		typeCode = inv.Payment.PaymentMeansCode
+	}
+	accounts := append(
+		[]einvoice.PaymentAccount{{IBAN: inv.Payment.IBAN, BIC: inv.Payment.BIC, AccountHolder: inv.Payment.AccountHolder}},
+		inv.Payment.AdditionalAccounts...,
+	)
+	for _, acc := range accounts {
+		if acc.IBAN == "" {
+			continue
 		}
-		if inv.Payment.PaymentMeansCode != "" {
-			settlement.PaymentMeans.TypeCode = inv.Payment.PaymentMeansCode
-		}
+		settlement.PaymentMeans = append(settlement.PaymentMeans, &PaymentMeans{
+			TypeCode:     typeCode,
+			PayeeAccount: &PayeeAccount{IBANID: acc.IBAN},
+		})
 	}
 
 	if !inv.DueDate.IsZero() {

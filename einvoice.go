@@ -53,6 +53,18 @@ type Payment struct {
 	BIC              string
 	AccountHolder    string
 	PaymentMeansCode string
+
+	// AdditionalAccounts are further payee accounts. EN 16931 allows several
+	// credit-transfer accounts (BG-17 is 0..n); each account is serialized as
+	// its own SpecifiedTradeSettlementPaymentMeans with the same type code.
+	AdditionalAccounts []PaymentAccount
+}
+
+// PaymentAccount is one additional payee bank account (BG-17 CREDIT TRANSFER).
+type PaymentAccount struct {
+	IBAN          string
+	BIC           string
+	AccountHolder string
 }
 
 type LineItem struct {

@@ -78,7 +78,7 @@ type Occurrence struct {
 
 type Settlement struct {
 	InvoiceCurrency      string                 `xml:"ram:InvoiceCurrencyCode"`
-	PaymentMeans         *PaymentMeans          `xml:"ram:SpecifiedTradeSettlementPaymentMeans,omitempty"`
+	PaymentMeans         []*PaymentMeans        `xml:"ram:SpecifiedTradeSettlementPaymentMeans,omitempty"`
 	ApplicableTradeTaxes []TradeTax             `xml:"ram:ApplicableTradeTax"`
 	BillingPeriod        *BillingPeriod         `xml:"ram:BillingSpecifiedPeriod,omitempty"`
 	AllowanceCharges     []TradeAllowanceCharge `xml:"ram:SpecifiedTradeAllowanceCharge,omitempty"`

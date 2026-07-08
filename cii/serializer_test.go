@@ -65,6 +65,27 @@ func TestSerialize(t *testing.T) {
 	}
 }
 
+func TestSerializeMultipleAccounts(t *testing.T) {
+	inv := sampleInvoice()
+	inv.Payment.AdditionalAccounts = []einvoice.PaymentAccount{
+		{IBAN: "DE02500105170137075030", BIC: "INGDDEFFXXX"},
+		{IBAN: ""}, // empty IBANs are skipped
+	}
+	out, err := cii.NewSerializer().Serialize(inv)
+	if err != nil {
+		t.Fatalf("Serialize: %v", err)
+	}
+	s := string(out)
+	for _, want := range []string{"DE89370400440532013000", "DE02500105170137075030"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("output missing account %q", want)
+		}
+	}
+	if n := strings.Count(s, "<ram:SpecifiedTradeSettlementPaymentMeans>"); n != 2 {
+		t.Errorf("expected 2 SpecifiedTradeSettlementPaymentMeans, got %d", n)
+	}
+}
+
 func TestSerializeBuyerReferenceFallback(t *testing.T) {
 	inv := sampleInvoice()
 	inv.BuyerReference = ""
