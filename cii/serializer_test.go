@@ -65,6 +65,28 @@ func TestSerialize(t *testing.T) {
 	}
 }
 
+func TestSerializeTypeCode(t *testing.T) {
+	// Default: commercial invoice (380).
+	out, err := cii.NewSerializer().Serialize(sampleInvoice())
+	if err != nil {
+		t.Fatalf("Serialize: %v", err)
+	}
+	if !strings.Contains(string(out), "<ram:TypeCode>380</ram:TypeCode>") {
+		t.Error("default TypeCode 380 missing")
+	}
+
+	// Explicit: corrected invoice / Stornorechnung (384).
+	inv := sampleInvoice()
+	inv.TypeCode = einvoice.TypeCorrectedInvoice
+	out, err = cii.NewSerializer().Serialize(inv)
+	if err != nil {
+		t.Fatalf("Serialize: %v", err)
+	}
+	if !strings.Contains(string(out), "<ram:TypeCode>384</ram:TypeCode>") {
+		t.Error("explicit TypeCode 384 missing")
+	}
+}
+
 func TestSerializeMultipleAccounts(t *testing.T) {
 	inv := sampleInvoice()
 	inv.Payment.AdditionalAccounts = []einvoice.PaymentAccount{

@@ -6,8 +6,23 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// Document type codes (BT-3, UNTDID 1001 subset permitted by EN 16931).
+const (
+	// TypeCommercialInvoice is a regular invoice (default).
+	TypeCommercialInvoice = "380"
+	// TypeCreditNote is a credit note (Gutschrift). Note the CII sign
+	// convention: amounts on a 381 document are positive.
+	TypeCreditNote = "381"
+	// TypeCorrectedInvoice is a corrected invoice (Rechnungskorrektur /
+	// Stornorechnung) carrying negative amounts that reverse the original.
+	TypeCorrectedInvoice = "384"
+)
+
 type Invoice struct {
-	Number       string
+	Number string
+	// TypeCode is the document type (BT-3). Empty defaults to
+	// TypeCommercialInvoice ("380").
+	TypeCode     string
 	IssueDate    time.Time
 	DueDate      time.Time
 	DeliveryDate time.Time // BT-72 Leistungs-/Lieferdatum (UStG mandatory)

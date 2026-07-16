@@ -150,6 +150,19 @@ supply — a deliver-to address is added automatically) and `CategoryReverseChar
 Document-level discounts and surcharges go in `Invoice.AllowanceCharges`
 (`AllowanceCharge`, BG-20/21); they adjust the taxable basis of their VAT group.
 
+### Cancellation invoices (Stornorechnung) & credit notes
+
+`Invoice.TypeCode` sets the document type (BT-3); empty defaults to `380`
+(commercial invoice). For a Stornorechnung use `einvoice.TypeCorrectedInvoice`
+(`384`) with negated **quantities** (never negative unit prices — BR-27):
+
+```go
+invoice.TypeCode = einvoice.TypeCorrectedInvoice // "384"
+```
+
+`einvoice.TypeCreditNote` (`381`) is also available; note that CII sign
+conventions expect positive amounts on a 381 document.
+
 ## CLI Usage
 
 ### Generate XML

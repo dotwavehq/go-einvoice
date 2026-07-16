@@ -14,6 +14,15 @@ func NewSerializer() *CIISerializer {
 	return &CIISerializer{}
 }
 
+// documentTypeCode resolves the document type (BT-3); empty falls back to
+// the commercial invoice ("380").
+func documentTypeCode(inv *einvoice.Invoice) string {
+	if inv.TypeCode == "" {
+		return TypeCodeCommercialInvoice
+	}
+	return inv.TypeCode
+}
+
 func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 	buyerRef := inv.BuyerReference
 	if buyerRef == "" {
@@ -250,7 +259,7 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 		},
 		Header: ExchangedDocument{
 			ID:       inv.Number,
-			TypeCode: TypeCodeCommercialInvoice,
+			TypeCode: documentTypeCode(inv),
 			IssueDate: DateType{
 				Value:  inv.IssueDate.Format("20060102"),
 				Format: DateFormatYYYYMMDD,
