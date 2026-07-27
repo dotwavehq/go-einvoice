@@ -14,6 +14,13 @@ import (
 // attachment (decompression bomb) from exhausting memory.
 const maxXMLSize = 20 << 20
 
+var wellKnownXMLNames = map[string]bool{
+	"factur-x.xml":        true,
+	"zugferd-invoice.xml": true,
+	"xrechnung.xml":       true,
+	"cii.xml":             true, // Peppol-style name seen in the wild
+}
+
 // ExtractXML returns the embedded e-invoice XML from a ZUGFeRD / Factur-X /
 // XRechnung PDF. It looks for the well-known attachment names first and
 // falls back to the only XML attachment if exactly one exists. Returns an
@@ -25,16 +32,10 @@ func ExtractXML(pdf []byte) ([]byte, error) {
 		return nil, fmt.Errorf("zugferd: read attachments: %w", err)
 	}
 
-	wellKnown := map[string]bool{
-		"factur-x.xml":        true,
-		"zugferd-invoice.xml": true,
-		"xrechnung.xml":       true,
-		"cii.xml":             true, // Peppol-style name seen in the wild
-	}
 	var xmlAtts []int
 	for i, att := range atts {
 		name := strings.ToLower(att.FileName)
-		if wellKnown[name] {
+		if wellKnownXMLNames[name] {
 			return readCapped(att.Reader)
 		}
 		if strings.HasSuffix(name, ".xml") {

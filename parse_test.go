@@ -105,6 +105,7 @@ const ublFixture = `<?xml version="1.0" encoding="UTF-8"?>
     <cac:PostalAddress><cbc:StreetName>Platz 1</cbc:StreetName><cbc:CityName>Düsseldorf</cbc:CityName>
       <cbc:PostalZone>40549</cbc:PostalZone><cac:Country><cbc:IdentificationCode>DE</cbc:IdentificationCode></cac:Country>
     </cac:PostalAddress>
+    <cac:PartyTaxScheme><cbc:CompanyID>222/5678/9012</cbc:CompanyID><cac:TaxScheme><cbc:ID>FC</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
     <cac:PartyTaxScheme><cbc:CompanyID>DE811223344</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
     <cac:PartyLegalEntity><cbc:RegistrationName>Vodafone GmbH</cbc:RegistrationName></cac:PartyLegalEntity>
   </cac:Party></cac:AccountingSupplierParty>

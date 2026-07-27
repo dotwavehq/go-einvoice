@@ -296,10 +296,16 @@ type ublParty struct {
 	City             string `xml:"PostalAddress>CityName"`
 	Postcode         string `xml:"PostalAddress>PostalZone"`
 	Country          string `xml:"PostalAddress>Country>IdentificationCode"`
-	VATID            string `xml:"PartyTaxScheme>CompanyID"`
-	ContactName      string `xml:"Contact>Name"`
-	ContactPhone     string `xml:"Contact>Telephone"`
-	ContactEmail     string `xml:"Contact>ElectronicMail"`
+	// A party may carry several PartyTaxScheme entries (VAT id plus the
+	// national tax number with scheme FC) — collected and filtered in
+	// ublPartyToParty, since a scalar field would keep the last one.
+	TaxSchemes []struct {
+		CompanyID string `xml:"CompanyID"`
+		Scheme    string `xml:"TaxScheme>ID"`
+	} `xml:"PartyTaxScheme"`
+	ContactName  string `xml:"Contact>Name"`
+	ContactPhone string `xml:"Contact>Telephone"`
+	ContactEmail string `xml:"Contact>ElectronicMail"`
 }
 
 type ublPaymentMeans struct {
@@ -435,13 +441,23 @@ func ublPartyToParty(up ublParty) Party {
 	if name == "" {
 		name = up.RegistrationName
 	}
+	var vatID string
+	for _, ts := range up.TaxSchemes {
+		if ts.Scheme == "VAT" {
+			vatID = ts.CompanyID
+			break
+		}
+		if vatID == "" {
+			vatID = ts.CompanyID
+		}
+	}
 	party := Party{
 		Name:                    name,
 		Street:                  up.Street,
 		City:                    up.City,
 		PostalCode:              up.Postcode,
 		CountryCode:             up.Country,
-		VATID:                   up.VATID,
+		VATID:                   vatID,
 		ElectronicAddress:       up.EndpointID.Value,
 		ElectronicAddressScheme: up.EndpointID.SchemeID,
 	}
