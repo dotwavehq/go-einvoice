@@ -14,6 +14,24 @@ This library is designed to help developers upgrade their invoicing systems for 
 ✅ Full support for EN 16931 (UN/CEFACT CII).
 ✅ Compliant with XRechnung 3.0 (German Standard).
 ✅ Generates ZUGFeRD / Factur-X files by embedding XML into existing PDFs.
+✅ Parses incoming e-invoices (CII **and** UBL syntax) back into the domain model, including extraction of the embedded XML from ZUGFeRD / Factur-X PDFs.
+
+## Reading e-invoices
+
+```go
+// Standalone XML (XRechnung CII or UBL, Peppol BIS):
+parsed, err := einvoice.Parse(xmlBytes)
+
+// ZUGFeRD / Factur-X PDF — extract the attachment first:
+xmlBytes, err := zugferd.ExtractXML(pdfBytes)
+parsed, err := einvoice.Parse(xmlBytes)
+
+fmt.Println(parsed.Seller.Name, parsed.Number, parsed.Totals.GrandTotal)
+```
+
+`Parse` is lenient by design: it returns the amounts **as stated** in the
+document (`Totals`, `Taxes`) and never recomputes them, so consumers can
+cross-check stated vs. derived values.
 
 ## Installation
 
