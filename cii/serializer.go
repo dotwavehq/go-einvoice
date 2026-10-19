@@ -72,7 +72,7 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 
 	var xmlLines []LineItem
 	for i, item := range inv.LineItems {
-		lineTotal := item.Quantity.Mul(item.UnitPrice)
+		lineTotal := lineNet(item)
 
 		xmlLine := LineItem{
 			DocumentLineDocument: LineDocument{
@@ -109,7 +109,10 @@ func (s *CIISerializer) Serialize(inv *einvoice.Invoice) ([]byte, error) {
 	// One VAT breakdown (BG-23) per (category, rate); totals are computed so they
 	// always reconcile (BR-CO-10..17). Group basis already reflects document
 	// allowances/charges; the line total is the sum of line nets only.
-	groups := taxBreakdown(inv)
+	groups, err := taxBreakdown(inv)
+	if err != nil {
+		return nil, err
+	}
 	taxTotal := decimal.Zero
 	tradeTaxes := make([]TradeTax, 0, len(groups))
 	for _, g := range groups {

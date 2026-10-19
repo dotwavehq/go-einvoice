@@ -99,4 +99,18 @@ type LineItem struct {
 	// default German text for a known ExemptionCode is used.
 	ExemptionCode   VATExCode
 	ExemptionReason string
+
+	// NetAmount overrides the line net amount (BT-131), which otherwise is
+	// Quantity * UnitPrice. Set it when the caller rounds or distributes line
+	// nets itself, e.g. on gross-priced documents.
+	NetAmount *decimal.Decimal
+
+	// TaxAmount is the line's precomputed VAT. When every line of a VAT
+	// breakdown group (BG-23) carries one and the group has no document-level
+	// allowance or charge, the group's VAT (BT-117) is their sum instead of
+	// basis * rate. This lets gross-priced documents (VAT taken out of the
+	// gross sum) carry the VAT their PDF shows. Serialize rejects a group VAT
+	// that differs from basis * rate by more than 0.01, or any VAT on a 0 %
+	// group, since the XML would fail BR-CO-17.
+	TaxAmount *decimal.Decimal
 }

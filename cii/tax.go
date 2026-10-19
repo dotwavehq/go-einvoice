@@ -1,6 +1,8 @@
 package cii
 
 import (
+	"fmt"
+
 	einvoice "github.com/dotwavehq/go-einvoice"
 	"github.com/shopspring/decimal"
 )
@@ -16,7 +18,17 @@ type taxGroup struct {
 	tax      decimal.Decimal
 	exCode   string
 	exReason string
+	// lineTax sums the lines' precomputed TaxAmount; it becomes the group VAT
+	// unless a line lacks one or an allowance/charge changed the basis.
+	lineTax    decimal.Decimal
+	computeTax bool
 }
+
+// maxTaxDeviation caps how far a precomputed group VAT may differ from
+// basis * rate. Taking VAT out of a gross sum deviates by at most one cent,
+// and 0.01 is the smallest tolerance EN 16931 allows (BR-CO-17 accepts 1.00
+// today; EN 16931-1:2026 narrows it to min(max(0.1 %, 0.01), 1.00)).
+var maxTaxDeviation = decimal.New(1, -2)
 
 // categoryOf returns the line's VAT category, defaulting to Standard ("S").
 func categoryOf(li einvoice.LineItem) string {
@@ -37,8 +49,12 @@ func exemptionOf(li einvoice.LineItem) (code, reason string) {
 	return code, reason
 }
 
-// lineNet returns the net amount of a line (BT-131): quantity * unit price.
+// lineNet returns the net amount of a line (BT-131): the caller's NetAmount,
+// else quantity * unit price.
 func lineNet(li einvoice.LineItem) decimal.Decimal {
+	if li.NetAmount != nil {
+		return *li.NetAmount
+	}
 	return li.Quantity.Mul(li.UnitPrice)
 }
 
@@ -53,8 +69,9 @@ func hasCategory(inv *einvoice.Invoice, cat einvoice.TaxCategory) bool {
 }
 
 // taxBreakdown groups the invoice lines into VAT breakdown entries, one per
-// (category, rate), summing the taxable basis and computing the tax per group.
-func taxBreakdown(inv *einvoice.Invoice) []taxGroup {
+// (category, rate), summing the taxable basis and computing the tax per group,
+// or taking the lines' precomputed TaxAmount when all of them carry one.
+func taxBreakdown(inv *einvoice.Invoice) ([]taxGroup, error) {
 	var groups []taxGroup
 	index := map[string]int{}
 	group := func(cat string, rate decimal.Decimal, code, reason string) int {
@@ -71,6 +88,11 @@ func taxBreakdown(inv *einvoice.Invoice) []taxGroup {
 		code, reason := exemptionOf(li)
 		i := group(categoryOf(li), li.TaxRate, code, reason)
 		groups[i].basis = groups[i].basis.Add(lineNet(li))
+		if li.TaxAmount == nil {
+			groups[i].computeTax = true
+		} else {
+			groups[i].lineTax = groups[i].lineTax.Add(*li.TaxAmount)
+		}
 	}
 	// Document-level allowances reduce, charges add to their group's basis.
 	for _, ac := range inv.AllowanceCharges {
@@ -79,6 +101,7 @@ func taxBreakdown(inv *einvoice.Invoice) []taxGroup {
 			cat = string(einvoice.CategoryStandard)
 		}
 		i := group(cat, ac.TaxRate, "", "")
+		groups[i].computeTax = true
 		if ac.IsCharge {
 			groups[i].basis = groups[i].basis.Add(ac.Amount)
 		} else {
@@ -86,7 +109,18 @@ func taxBreakdown(inv *einvoice.Invoice) []taxGroup {
 		}
 	}
 	for i := range groups {
-		groups[i].tax = groups[i].basis.Mul(groups[i].rate).Div(hundred).Round(2)
+		g := &groups[i]
+		if g.computeTax {
+			g.tax = g.basis.Mul(g.rate).Div(hundred).Round(2)
+			continue
+		}
+		// BR-CO-17 checks the VAT against the basis as printed (2 decimals).
+		want := g.basis.Round(2).Mul(g.rate).Div(hundred).Round(2)
+		if g.lineTax.Sub(want).Abs().GreaterThan(maxTaxDeviation) || (g.rate.IsZero() && !g.lineTax.IsZero()) {
+			return nil, fmt.Errorf("VAT group %s %s%%: precomputed tax %s does not match basis %s (expected %s ± %s)",
+				g.category, g.rate, g.lineTax.StringFixed(2), g.basis.StringFixed(2), want.StringFixed(2), maxTaxDeviation)
+		}
+		g.tax = g.lineTax
 	}
-	return groups
+	return groups, nil
 }

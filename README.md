@@ -168,6 +168,30 @@ supply — a deliver-to address is added automatically) and `CategoryReverseChar
 Document-level discounts and surcharges go in `Invoice.AllowanceCharges`
 (`AllowanceCharge`, BG-20/21); they adjust the taxable basis of their VAT group.
 
+### Gross-priced documents (Preise inkl. USt)
+
+When the caller takes the VAT out of a gross price (e.g. 41,990.00 € incl.
+19 %), the net-based recalculation would total 41,989.99 €. Pass the line net
+and VAT the document shows instead:
+
+```go
+net, vat := decimal.RequireFromString("35285.71"), decimal.RequireFromString("6704.29")
+item := einvoice.LineItem{
+    Description: "Fahrzeug", Quantity: decimal.NewFromInt(1), UnitCode: "C62",
+    UnitPrice: net, TaxRate: decimal.NewFromInt(19),
+    NetAmount: &net, // BT-131, defaults to Quantity * UnitPrice
+    TaxAmount: &vat, // group VAT = sum of line VAT when all lines carry one
+}
+```
+
+A group without allowances/charges whose lines all carry a `TaxAmount` uses
+their sum as BT-117; otherwise it falls back to basis × rate. `Serialize`
+returns an error when that sum differs from basis × rate by more than 0.01, or
+when a 0 % group carries VAT. Taking VAT out of a gross sum never deviates by
+more than a cent, and 0.01 also holds under the tighter tolerance of
+EN 16931-1:2026 (BR-CO-17 accepts up to 1.00 today; verified with the KoSIT
+validator and XRechnung 3.0.2).
+
 ### Cancellation invoices (Stornorechnung) & credit notes
 
 `Invoice.TypeCode` sets the document type (BT-3); empty defaults to `380`

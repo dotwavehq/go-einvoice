@@ -256,3 +256,107 @@ func TestSerializeReverseCharge(t *testing.T) {
 		}
 	}
 }
+
+func ptr(s string) *decimal.Decimal {
+	d := dec(s)
+	return &d
+}
+
+// Precomputed line net/VAT (gross-priced documents): 41990.00 incl. 19 % is
+// net 35285.71 + VAT 6704.29, while basis * rate would give 6704.28.
+func TestSerializePrecomputedTax(t *testing.T) {
+	line := func(net, tax string) einvoice.LineItem {
+		li := einvoice.LineItem{Description: "Fahrzeug", Quantity: dec("1"), UnitCode: "C62", UnitPrice: dec(net), TaxRate: dec("19"), NetAmount: ptr(net)}
+		if tax != "" {
+			li.TaxAmount = ptr(tax)
+		}
+		return li
+	}
+	cases := []struct {
+		name       string
+		lines      []einvoice.LineItem
+		allowances []einvoice.AllowanceCharge
+		want       []string
+	}{
+		{
+			name:  "gross line keeps the VAT taken out of the gross",
+			lines: []einvoice.LineItem{line("35285.71", "6704.29")},
+			want: []string{
+				"<ram:CalculatedAmount>6704.29</ram:CalculatedAmount>",
+				"<ram:BasisAmount>35285.71</ram:BasisAmount>",
+				"<ram:TaxTotalAmount currencyID=\"EUR\">6704.29</ram:TaxTotalAmount>",
+				"<ram:DuePayableAmount>41990.00</ram:DuePayableAmount>",
+			},
+		},
+		{
+			name:  "storno (negated) gross line",
+			lines: []einvoice.LineItem{line("-35285.71", "-6704.29")},
+			want:  []string{"<ram:CalculatedAmount>-6704.29</ram:CalculatedAmount>", "<ram:DuePayableAmount>-41990.00</ram:DuePayableAmount>"},
+		},
+		{
+			name:  "group VAT is the sum of its lines",
+			lines: []einvoice.LineItem{line("35285.72", "6704.28"), line("753.78", "143.22")},
+			want:  []string{"<ram:CalculatedAmount>6847.50</ram:CalculatedAmount>", "<ram:BasisAmount>36039.50</ram:BasisAmount>"},
+		},
+		{
+			name:  "one line without VAT falls back to basis * rate",
+			lines: []einvoice.LineItem{line("35285.71", "6704.29"), line("1.00", "")},
+			want:  []string{"<ram:CalculatedAmount>6704.47</ram:CalculatedAmount>", "<ram:BasisAmount>35286.71</ram:BasisAmount>"},
+		},
+		{
+			name:       "allowance falls back to basis * rate",
+			lines:      []einvoice.LineItem{line("35285.71", "6704.29")},
+			allowances: []einvoice.AllowanceCharge{{Amount: dec("100"), TaxCategory: einvoice.CategoryStandard, TaxRate: dec("19"), Reason: "Rabatt"}},
+			want:       []string{"<ram:CalculatedAmount>6685.28</ram:CalculatedAmount>"},
+		},
+		{
+			name:  "NetAmount overrides quantity * unit price",
+			lines: []einvoice.LineItem{{Description: "x", Quantity: dec("3"), UnitCode: "C62", UnitPrice: dec("251.26"), TaxRate: dec("19"), NetAmount: ptr("753.79")}},
+			want:  []string{"<ram:LineTotalAmount>753.79</ram:LineTotalAmount>", "<ram:CalculatedAmount>143.22</ram:CalculatedAmount>"},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			inv := sampleInvoice()
+			inv.LineItems, inv.AllowanceCharges = c.lines, c.allowances
+			out, err := cii.NewSerializer().Serialize(inv)
+			if err != nil {
+				t.Fatalf("Serialize: %v", err)
+			}
+			for _, want := range c.want {
+				if !strings.Contains(string(out), want) {
+					t.Errorf("output missing %q", want)
+				}
+			}
+		})
+	}
+}
+
+// A precomputed VAT the XML could not justify (BR-CO-17) is rejected instead
+// of producing an invalid e-invoice.
+func TestSerializePrecomputedTaxRejected(t *testing.T) {
+	cases := []struct {
+		name    string
+		item    einvoice.LineItem
+		wantErr bool
+	}{
+		{"one cent off is accepted", einvoice.LineItem{TaxRate: dec("19"), NetAmount: ptr("35285.71"), TaxAmount: ptr("6704.29")}, false},
+		{"two cents off is rejected", einvoice.LineItem{TaxRate: dec("19"), NetAmount: ptr("35285.71"), TaxAmount: ptr("6704.30")}, true},
+		{"VAT on a 0 % line is rejected", einvoice.LineItem{TaxRate: dec("0"), NetAmount: ptr("100"), TaxAmount: ptr("0.01")}, true},
+		{"zero VAT on a 0 % line is accepted", einvoice.LineItem{TaxRate: dec("0"), NetAmount: ptr("100"), TaxAmount: ptr("0")}, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			inv := sampleInvoice()
+			c.item.Description, c.item.Quantity, c.item.UnitCode, c.item.UnitPrice = "x", dec("1"), "C62", *c.item.NetAmount
+			if c.item.TaxRate.IsZero() {
+				c.item.TaxCategory, c.item.ExemptionCode = einvoice.CategoryExempt, einvoice.VATExSecondHandGoods
+			}
+			inv.LineItems = []einvoice.LineItem{c.item}
+			_, err := cii.NewSerializer().Serialize(inv)
+			if (err != nil) != c.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, c.wantErr)
+			}
+		})
+	}
+}
